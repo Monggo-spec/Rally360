@@ -166,11 +166,50 @@ pnpm db:migrate  # apply migrations and seed
 pnpm db:reset    # delete the local PGlite database
 ```
 
-## Production notes
+## Deploying
 
-Set `DATABASE_URL` (Postgres) and `SESSION_SECRET` — the app refuses to start
-without them in production — and `SEED_DEMO_DATA=false`. Demo members are never
-seeded when `NODE_ENV=production`.
+**You need a real Postgres database.** The local default, PGlite, writes to
+`./.data` on disk — on a serverless host that filesystem is read-only and thrown
+away between requests, so every booking would vanish. Vercel Postgres, Neon and
+Supabase all have a free tier that works.
+
+The app refuses to start in production without `DATABASE_URL` and
+`SESSION_SECRET`. That is deliberate: failing loudly beats quietly losing data.
+
+### Vercel
+
+1. **Add New → Project → Import Git Repository** and pick this repo. No API
+   token needed — importing uses your linked GitHub account.
+2. Create the Postgres database and copy its connection string.
+3. Set these environment variables on the project:
+
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | the Postgres connection string |
+   | `SESSION_SECRET` | a long random string (`openssl rand -base64 32`) |
+   | `SEED_DEMO_DATA` | `false` |
+   | `DISPLAY_ACCESS_CODE` | optional, gates `/display` behind `?code=…` |
+
+4. Deploy. Vercel runs `vercel-build`, which applies migrations against
+   `DATABASE_URL` before building, so no serverless instance has to migrate on
+   its first request.
+
+Two things this repo already handles, and why:
+
+- `outputFileTracingIncludes` in `next.config.ts` pins the `drizzle/` folder into
+  the deployed bundle. The migrator reads those `.sql` files from disk rather
+  than importing them; the current tracer does find them anyway, but nothing in
+  the code guarantees that, so the requirement is stated rather than assumed.
+- The court seed uses `onConflictDoNothing()`. Several instances cold-start at
+  once and each runs the seed, so without it they race on the unique court label.
+
+Demo members are never seeded when `NODE_ENV=production`, whatever
+`SEED_DEMO_DATA` says — so a forgotten variable cannot publish fifteen accounts
+that share a password printed in this README.
+
+After the first deploy, create your own admin account: register through `/register`,
+then promote it with a one-off SQL statement
+(`update users set role = 'admin' where email = '…'`).
 
 Not built yet, and deliberately out of scope for this template: payments, email
 or SMS notifications, recurring bookings, and league/ladder scoring.

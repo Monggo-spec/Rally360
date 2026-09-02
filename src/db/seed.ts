@@ -41,14 +41,19 @@ export async function seedClub({ demo }: { demo: boolean }) {
     .from(courts);
 
   if (courtCount === 0) {
-    await db.insert(courts).values(
-      Array.from({ length: COURT_COUNT }, (_, index) => ({
-        label: `Court ${index + 1}`,
-        surface: index < 4 ? "Cushioned acrylic" : "Textured concrete",
-        indoor: index < 4,
-        sortOrder: index + 1,
-      })),
-    );
+    await db
+      .insert(courts)
+      .values(
+        Array.from({ length: COURT_COUNT }, (_, index) => ({
+          label: `Court ${index + 1}`,
+          surface: index < 4 ? "Cushioned acrylic" : "Textured concrete",
+          indoor: index < 4,
+          sortOrder: index + 1,
+        })),
+      )
+      // Serverless starts several instances at once, and each one runs this on
+      // its first request. Without this they race on the unique label index.
+      .onConflictDoNothing();
   }
 
   if (!demo) return;
