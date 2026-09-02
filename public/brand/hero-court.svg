@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-label="Placeholder illustration of a pickleball court">
+  <defs>
+    <linearGradient id="hc-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07272f"/>
+      <stop offset="1" stop-color="#0f4f52"/>
+    </linearGradient>
+    <linearGradient id="hc-floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12706b"/>
+      <stop offset="1" stop-color="#0a4a48"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="560" fill="url(#hc-sky)"/>
+  <circle cx="672" cy="96" r="150" fill="#cbf24d" opacity="0.10"/>
+  <circle cx="120" cy="470" r="180" fill="#cbf24d" opacity="0.06"/>
+
+  <!-- court in perspective -->
+  <polygon points="150,470 650,470 560,190 240,190" fill="url(#hc-floor)"/>
+  <polygon points="150,470 650,470 560,190 240,190" fill="none" stroke="#e9fbc6" stroke-opacity="0.85" stroke-width="3"/>
+  <!-- kitchen lines -->
+  <line x1="196" y1="330" x2="604" y2="330" stroke="#e9fbc6" stroke-opacity="0.8" stroke-width="3"/>
+  <line x1="214" y1="278" x2="586" y2="278" stroke="#e9fbc6" stroke-opacity="0.55" stroke-width="2.5"/>
+  <!-- centre line -->
+  <line x1="400" y1="470" x2="400" y2="330" stroke="#e9fbc6" stroke-opacity="0.7" stroke-width="2.5"/>
+  <line x1="400" y1="278" x2="400" y2="190" stroke="#e9fbc6" stroke-opacity="0.5" stroke-width="2.5"/>
+
+  <!-- net -->
+  <line x1="176" y1="304" x2="624" y2="304" stroke="#f6fff0" stroke-width="4"/>
+  <rect x="176" y="264" width="448" height="40" fill="#f6fff0" opacity="0.16"/>
+  <line x1="176" y1="264" x2="176" y2="316" stroke="#f6fff0" stroke-width="5"/>
+  <line x1="624" y1="264" x2="624" y2="316" stroke="#f6fff0" stroke-width="5"/>
+
+  <!-- players (simple silhouettes) -->
+  <g fill="#04161b" opacity="0.88">
+    <circle cx="292" cy="396" r="15"/>
+    <rect x="278" y="414" width="28" height="46" rx="13"/>
+    <circle cx="505" cy="392" r="15"/>
+    <rect x="491" y="410" width="28" height="46" rx="13"/>
+  </g>
+  <g fill="#cbf24d">
+    <rect x="308" y="404" width="7" height="22" rx="3.5" transform="rotate(28 311 415)"/>
+    <ellipse cx="322" cy="388" rx="11" ry="13" transform="rotate(28 322 388)"/>
+    <rect x="478" y="400" width="7" height="22" rx="3.5" transform="rotate(-28 481 411)"/>
+    <ellipse cx="468" cy="384" rx="11" ry="13" transform="rotate(-28 468 384)"/>
+  </g>
+
+  <!-- ball in flight -->
+  <circle cx="404" cy="238" r="13" fill="#ffffff"/>
+  <g fill="#0f766e">
+    <circle cx="400" cy="234" r="2"/>
+    <circle cx="408" cy="235" r="2"/>
+    <circle cx="404" cy="240" r="2"/>
+    <circle cx="399" cy="243" r="2"/>
+    <circle cx="409" cy="243" r="2"/>
+  </g>
+
+  <g font-family="ui-sans-serif, Segoe UI, sans-serif">
+    <rect x="28" y="28" width="176" height="30" rx="15" fill="#ffffff" opacity="0.12"/>
+    <text x="46" y="48" fill="#cbf24d" font-size="13" font-weight="700" letter-spacing="2.4">TEMPLATE IMAGE</text>
+  </g>
+</svg>

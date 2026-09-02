@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Placeholder club logo">
+  <defs>
+    <linearGradient id="lm-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#04161b"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#lm-bg)"/>
+  <!-- paddle -->
+  <g transform="rotate(-24 32 32)">
+    <rect x="27.5" y="36" width="9" height="18" rx="4.5" fill="#cbf24d" opacity="0.85"/>
+    <ellipse cx="32" cy="26" rx="15" ry="17" fill="#cbf24d"/>
+    <ellipse cx="32" cy="26" rx="11" ry="13" fill="none" stroke="#24310a" stroke-opacity="0.25" stroke-width="1.5"/>
+  </g>
+  <!-- ball -->
+  <circle cx="46" cy="45" r="9" fill="#ffffff"/>
+  <g fill="#0f766e">
+    <circle cx="43" cy="42" r="1.5"/>
+    <circle cx="49" cy="42.5" r="1.5"/>
+    <circle cx="46" cy="46" r="1.5"/>
+    <circle cx="42.5" cy="47.5" r="1.5"/>
+    <circle cx="49.5" cy="47.5" r="1.5"/>
+  </g>
+</svg>

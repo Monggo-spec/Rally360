@@ -1,0 +1,1 @@
+ALTER TABLE "open_play_registrations" ADD COLUMN "seated_at" timestamp with time zone;
