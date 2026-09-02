@@ -25,8 +25,8 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
         <input id="title" name="title" className="input" placeholder="Weeknight Open Play" required />
       </div>
 
-      <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
-        <div className="field" style={{ flex: "1 1 170px" }}>
+      <div className="field-row">
+        <div className="field">
           <label htmlFor="dateKey">Date</label>
           <select id="dateKey" name="dateKey" className="input" defaultValue={today}>
             {days.map((key) => (
@@ -36,7 +36,7 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
             ))}
           </select>
         </div>
-        <div className="field" style={{ flex: "1 1 130px" }}>
+        <div className="field">
           <label htmlFor="startHour">Starts</label>
           <select id="startHour" name="startHour" className="input" defaultValue="18">
             {HOURS.slice(0, -1).map((hour) => (
@@ -46,7 +46,7 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
             ))}
           </select>
         </div>
-        <div className="field" style={{ flex: "1 1 130px" }}>
+        <div className="field">
           <label htmlFor="endHour">Ends</label>
           <select id="endHour" name="endHour" className="input" defaultValue="21">
             {HOURS.slice(1).map((hour) => (
@@ -84,8 +84,8 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
         </span>
       </div>
 
-      <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
-        <div className="field" style={{ flex: "1 1 160px" }}>
+      <div className="field-row">
+        <div className="field">
           <label htmlFor="skillLevel">Skill level</label>
           <select id="skillLevel" name="skillLevel" className="input" defaultValue="all">
             <option value="all">All levels</option>
@@ -94,7 +94,7 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
             <option value="advanced">Advanced</option>
           </select>
         </div>
-        <div className="field" style={{ flex: "1 1 140px" }}>
+        <div className="field">
           <label htmlFor="playersPerCourt">Players per court</label>
           <input
             id="playersPerCourt"
@@ -106,7 +106,7 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
           />
           <span className="hint">No maximum. Put as many players on a court as you run.</span>
         </div>
-        <div className="field" style={{ flex: "1 1 140px" }}>
+        <div className="field">
           <label htmlFor="feePesos">Fee (PHP)</label>
           <input id="feePesos" name="feePesos" className="input" type="number" min={0} defaultValue={250} />
         </div>
