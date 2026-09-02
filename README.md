@@ -190,6 +190,10 @@ The app refuses to start in production without `DATABASE_URL` and
    | `SEED_DEMO_DATA` | `false` |
    | `DISPLAY_ACCESS_CODE` | optional, gates `/display` behind `?code=…` |
 
+   If the database add-on injected `POSTGRES_URL` instead of `DATABASE_URL`,
+   leave it — the app reads `DATABASE_URL`, then `POSTGRES_URL`, then
+   `POSTGRES_PRISMA_URL`. Only `SESSION_SECRET` is always yours to set.
+
 4. Deploy. Vercel runs `vercel-build`, which applies migrations against
    `DATABASE_URL` before building, so no serverless instance has to migrate on
    its first request.
