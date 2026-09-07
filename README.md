@@ -213,9 +213,11 @@ Two things this repo already handles, and why:
 - The court seed uses `onConflictDoNothing()`. Several instances cold-start at
   once and each runs the seed, so without it they race on the unique court label.
 
-Demo members are never seeded when `NODE_ENV=production`, whatever
-`SEED_DEMO_DATA` says — so a forgotten variable cannot publish fifteen accounts
-that share a password printed in this README.
+Demo members are not seeded in production unless `SEED_DEMO_DATA` is exactly
+`true`. Setting it publishes fifteen accounts that share a password printed in
+this README, the club admin among them — anybody who finds the URL can sign in
+and run the club. It exists so a hosted copy can be handed to somebody to try.
+Set it to `false` before the club depends on this, and delete the demo accounts.
 
 After the first deploy, create your own admin account: register through `/register`,
 then promote it with a one-off SQL statement
