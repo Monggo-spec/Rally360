@@ -194,9 +194,15 @@ The app refuses to start in production without `DATABASE_URL` and
    leave it — the app reads `DATABASE_URL`, then `POSTGRES_URL`, then
    `POSTGRES_PRISMA_URL`. Only `SESSION_SECRET` is always yours to set.
 
-4. Deploy. Vercel runs `vercel-build`, which applies migrations against
-   `DATABASE_URL` before building, so no serverless instance has to migrate on
-   its first request.
+4. Deploy. The build does not touch the database — `ensureAppReady()` applies
+   migrations on the first request instead.
+
+   Migrating during the build is the tidier arrangement, and this repo used to
+   do it. It was dropped because it makes the build fail outright whenever the
+   connection string is not readable at build time, which turns an env var
+   problem into an unbuildable project. Migrating at runtime costs the first
+   request after a cold start a little time, and lets several instances race to
+   apply the same migration, which the migrator tolerates.
 
 Two things this repo already handles, and why:
 
