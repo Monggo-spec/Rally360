@@ -5,6 +5,12 @@ import * as z from "zod";
 import { clearSessionCookie, registerMember, setSessionCookie, verifyCredentials } from "../auth";
 import { SKILL_LEVELS } from "../config";
 import { fail, type FormState } from "../form-state";
+import {
+  MOBILE_HINT,
+  isPersonName,
+  normalizePhilippineMobile,
+  tidyName,
+} from "../validation";
 
 const loginSchema = z.object({
   email: z.email({ error: "Enter a valid email address." }).trim(),
@@ -12,7 +18,11 @@ const loginSchema = z.object({
 });
 
 const registerSchema = z.object({
-  name: z.string().min(2, { error: "Enter your full name." }).trim(),
+  name: z
+    .string()
+    .trim()
+    .min(2, { error: "Enter your full name." })
+    .refine(isPersonName, { error: "Names cannot contain numbers." }),
   email: z.email({ error: "Enter a valid email address." }).trim(),
   phone: z.string().trim().optional(),
   password: z.string().min(8, { error: "Use at least 8 characters." }),
@@ -47,7 +57,18 @@ export async function registerAction(_previous: FormState, formData: FormData): 
     return fail(first ?? "Check the form and try again.");
   }
 
-  const result = await registerMember(parsed.data);
+  // The phone is optional, but if one is given it has to be reachable.
+  let phone: string | null = null;
+  if (parsed.data.phone) {
+    phone = normalizePhilippineMobile(parsed.data.phone);
+    if (!phone) return fail(`That is not a Philippine mobile number. ${MOBILE_HINT}`);
+  }
+
+  const result = await registerMember({
+    ...parsed.data,
+    name: tidyName(parsed.data.name),
+    phone,
+  });
   if (!result.ok) return fail(result.error);
 
   await setSessionCookie(result.user);

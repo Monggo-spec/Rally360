@@ -477,6 +477,26 @@ export type Member = {
   createdAt: Date;
 };
 
+/** The signed-in member's own record, for the profile form. */
+export async function getMember(userId: string): Promise<Member | null> {
+  await ensureAppReady();
+  const [row] = await getDb()
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      phone: users.phone,
+      role: users.role,
+      skillLevel: users.skillLevel,
+      active: users.active,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function listMembers(): Promise<Member[]> {
   await ensureAppReady();
   return getDb()

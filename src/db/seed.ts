@@ -68,7 +68,7 @@ export async function seedClub({ demo }: { demo: boolean }) {
     .values({
       email: "admin@example.com",
       name: "Club Admin",
-      phone: "+63 900 000 0001",
+      phone: "09170000001",
       passwordHash,
       role: "admin",
       skillLevel: "advanced",
@@ -81,7 +81,7 @@ export async function seedClub({ demo }: { demo: boolean }) {
       DEMO_PLAYERS.map((player, index) => ({
         email: player.email,
         name: player.name,
-        phone: `+63 900 000 ${String(index + 10).padStart(4, "0")}`,
+        phone: `0917000${String(index + 10).padStart(4, "0")}`,
         passwordHash,
         role: "player" as const,
         skillLevel: player.skillLevel,

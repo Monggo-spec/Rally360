@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ListChecks,
   MonitorPlay,
+  UserRound,
   Users,
   Volleyball,
   Wrench,
@@ -18,6 +19,7 @@ const MEMBER_LINKS = [
   { href: "/play/book", label: "Book a court", icon: CalendarDays },
   { href: "/play/open-play", label: "Open play", icon: Volleyball },
   { href: "/play/bookings", label: "My schedule", icon: ClipboardList },
+  { href: "/play/profile", label: "My profile", icon: UserRound },
 ] as const;
 
 const ADMIN_LINKS = [
