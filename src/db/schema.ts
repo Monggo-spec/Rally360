@@ -118,7 +118,7 @@ export const openPlayRegistrations = pgTable(
       .references(() => openPlaySessions.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id),
     status: text("status", {
-      enum: ["registered", "waitlisted", "checked_in", "playing", "cancelled", "no_show"],
+      enum: ["registered", "waitlisted", "checked_in", "playing", "resting", "cancelled", "no_show"],
     })
       .notNull()
       .default("registered"),

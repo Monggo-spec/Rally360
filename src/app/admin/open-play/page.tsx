@@ -83,9 +83,9 @@ export default async function AdminOpenPlayPage() {
                       <th>Session</th>
                       <th>When</th>
                       <th>Courts</th>
-                      <th>Seats</th>
+                      <th>Joined</th>
                       <th>Present</th>
-                      <th>Waitlist</th>
+                      <th>On court</th>
                       <th>Fee</th>
                       <th>Status</th>
                       <th />
@@ -95,7 +95,15 @@ export default async function AdminOpenPlayPage() {
                     {sessions.map((item) => (
                       <tr key={item.id}>
                         <td>
-                          <strong>{item.title}</strong>
+                          {/* A live session is the one the desk keeps opening, so its
+                              name is a shortcut straight to the run page. */}
+                          {item.status === "live" ? (
+                            <Link className="row-link" href={`/admin/open-play/${item.id}`}>
+                              <strong>{item.title}</strong>
+                            </Link>
+                          ) : (
+                            <strong>{item.title}</strong>
+                          )}
                           <div className="muted" style={{ fontSize: 12 }}>
                             {item.skillLevel === "all" ? "All levels" : item.skillLevel}
                           </div>
@@ -109,16 +117,12 @@ export default async function AdminOpenPlayPage() {
                         <td className="muted">{item.courtLabels.join(", ") || "-"}</td>
                         <td>
                           <strong>
-                            {item.counts.claimed}/{item.counts.capacity}
+                            {item.counts.claimed}
                           </strong>
                         </td>
                         <td>{item.counts.present}</td>
-                        <td>
-                          {item.counts.waitlisted > 0 ? (
-                            <span className="pill warn">{item.counts.waitlisted}</span>
-                          ) : (
-                            <span className="muted">0</span>
-                          )}
+                        <td className="muted">
+                          {item.counts.playing}/{item.counts.courtSeats}
                         </td>
                         <td className="muted">{formatFee(item.feeCents)}</td>
                         <td>
@@ -131,9 +135,17 @@ export default async function AdminOpenPlayPage() {
                           />
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <Link className="button small ghost" href={`/admin/open-play/${item.id}`}>
-                            Run
-                          </Link>
+                          <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
+                            <Link
+                              className="button small quiet"
+                              href={`/admin/open-play/${item.id}/edit`}
+                            >
+                              Edit
+                            </Link>
+                            <Link className="button small ghost" href={`/admin/open-play/${item.id}`}>
+                              Run
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}

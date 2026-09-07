@@ -11,14 +11,17 @@ import {
   openPlaySessions,
   users,
 } from "@/db/schema";
+import { sweepSessions } from "./auto-finish";
 import { PLAYERS_PER_COURT } from "./config";
 import {
   buildCourtBoard,
   countRegistrations,
+  displayName,
   nextUp,
-  sessionCapacity,
+  courtSeats,
   type BoardPlayer,
   type CourtBoardEntry,
+  type RegistrationStatus,
   type SessionCounts,
 } from "./open-play";
 import {
@@ -163,7 +166,7 @@ export type SessionSummary = {
   courtLabels: string[];
   counts: SessionCounts;
   /** Only set when the query was scoped to a member. */
-  myStatus?: "registered" | "waitlisted" | "checked_in" | "playing" | "cancelled" | "no_show" | null;
+  myStatus?: RegistrationStatus | null;
 };
 
 async function decorateSessions(
@@ -204,7 +207,7 @@ async function decorateSessions(
       notes: row.notes,
       playersPerCourt: row.playersPerCourt,
       courtLabels: labels,
-      counts: countRegistrations(registrations, sessionCapacity(labels.length, row.playersPerCourt)),
+      counts: countRegistrations(registrations, courtSeats(labels.length, row.playersPerCourt)),
       myStatus: viewerId
         ? (registrations.find((registration) => registration.userId === viewerId)?.status ?? null)
         : undefined,
@@ -214,6 +217,7 @@ async function decorateSessions(
 
 export async function listUpcomingSessions(viewerId?: string, from: Date = new Date()): Promise<SessionSummary[]> {
   await ensureAppReady();
+  await sweepSessions();
   const rows = await getDb()
     .select()
     .from(openPlaySessions)
@@ -231,6 +235,7 @@ export const ARCHIVED_SESSION_STATUSES: SessionStatus[] = ["finished", "cancelle
 
 export async function listSessionsByStatus(statuses: SessionStatus[]): Promise<SessionSummary[]> {
   await ensureAppReady();
+  await sweepSessions();
   const rows = await getDb()
     .select()
     .from(openPlaySessions)
@@ -241,6 +246,7 @@ export async function listSessionsByStatus(statuses: SessionStatus[]): Promise<S
 
 export async function countSessionsByStatus(statuses: SessionStatus[]): Promise<number> {
   await ensureAppReady();
+  await sweepSessions();
   const [row] = await getDb()
     .select({ value: sql<number>`count(*)::int` })
     .from(openPlaySessions)
@@ -301,6 +307,88 @@ export async function getSessionDetail(sessionId: string, viewerId?: string): Pr
     board: buildCourtBoard(sessionCourts, roster, row.playersPerCourt),
     queue: nextUp(roster),
     readAt: Date.now(),
+  };
+}
+
+export type MemberBoardPlayer = { name: string; skillLevel: string; isYou: boolean };
+
+export type MemberSessionBoard = {
+  session: SessionSummary;
+  courts: { label: string; playersPerCourt: number; players: MemberBoardPlayer[] }[];
+  queue: (MemberBoardPlayer & { position: number })[];
+  notArrived: number;
+  /** Where the viewer stands, in the words the page shows them. */
+  you:
+    | { kind: "playing"; courtLabel: string }
+    | { kind: "queued"; position: number; ahead: number }
+    | { kind: "resting" }
+    | { kind: "registered" }
+    | { kind: "waitlisted"; position: number }
+    | { kind: "none" };
+  /** Everyone sitting one out, so the queue page accounts for the whole room. */
+  resting: MemberBoardPlayer[];
+};
+
+/**
+ * What a member may see about a session they are in: who is on which court and
+ * who is in the queue, by the same shortened names the lobby TV shows. Contact
+ * details stay on the admin roster.
+ */
+export async function getMemberSessionBoard(
+  sessionId: string,
+  viewerId: string,
+): Promise<MemberSessionBoard | null> {
+  const detail = await getSessionDetail(sessionId, viewerId);
+  if (!detail) return null;
+
+  const roster = detail.roster;
+  // The court board carries registration ids, not user ids, so map across to
+  // work out which seat belongs to the person looking at the page.
+  const userIdByRegistration = new Map(roster.map((player) => [player.registrationId, player.userId]));
+
+  const label = (player: {
+    registrationId: string;
+    name: string;
+    skillLevel: string;
+  }): MemberBoardPlayer => {
+    const isYou = userIdByRegistration.get(player.registrationId) === viewerId;
+    return { name: isYou ? "You" : displayName(player.name), skillLevel: player.skillLevel, isYou };
+  };
+  const queueRows = roster
+    .filter((player) => player.status === "checked_in" && player.courtId === null)
+    .sort((a, b) => a.queuePosition - b.queuePosition);
+
+  const waitlistRows = roster
+    .filter((player) => player.status === "waitlisted")
+    .sort((a, b) => a.queuePosition - b.queuePosition);
+
+  const mine = roster.find((player) => player.userId === viewerId);
+  const myQueueIndex = queueRows.findIndex((player) => player.userId === viewerId);
+  const myWaitIndex = waitlistRows.findIndex((player) => player.userId === viewerId);
+  const myCourt = detail.courts.find((court) => court.id === mine?.courtId);
+
+  return {
+    session: detail,
+    courts: detail.board.map((court) => ({
+      label: court.label,
+      playersPerCourt: court.playersPerCourt,
+      players: court.players.map(label),
+    })),
+    queue: queueRows.map((player, index) => ({ ...label(player), position: index + 1 })),
+    resting: roster.filter((player) => player.status === "resting").map(label),
+    notArrived: roster.filter((player) => player.status === "registered").length,
+    you:
+      mine?.status === "playing" && myCourt
+        ? { kind: "playing", courtLabel: myCourt.label }
+        : mine?.status === "resting"
+          ? { kind: "resting" }
+          : myQueueIndex >= 0
+            ? { kind: "queued", position: myQueueIndex + 1, ahead: myQueueIndex }
+            : myWaitIndex >= 0
+              ? { kind: "waitlisted", position: myWaitIndex + 1 }
+              : mine && mine.status !== "cancelled" && mine.status !== "no_show"
+                ? { kind: "registered" }
+                : { kind: "none" },
   };
 }
 

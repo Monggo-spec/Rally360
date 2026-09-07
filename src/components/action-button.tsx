@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTransientFeedback } from "@/components/use-transient-feedback";
 import type { FormState } from "@/lib/form-state";
 
 type ServerAction = (state: FormState, formData: FormData) => Promise<FormState>;
@@ -28,7 +29,8 @@ export function ActionButton({
   confirm?: string;
   showFeedback?: boolean;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const [rawState, formAction, pending] = useActionState(action, undefined);
+  const state = useTransientFeedback(rawState);
 
   return (
     <form

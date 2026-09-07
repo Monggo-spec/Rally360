@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { registerAction } from "@/lib/actions/auth";
-import { MOBILE_HINT, NAME_HINT } from "@/lib/validation";
+import { NameInput } from "@/components/name-input";
 
 export function RegisterForm() {
   const [state, formAction, pending] = useActionState(registerAction, undefined);
@@ -14,8 +14,7 @@ export function RegisterForm() {
 
       <div className="field">
         <label htmlFor="name">Full name</label>
-        <input id="name" name="name" className="input" autoComplete="name" required />
-        <span className="hint">{NAME_HINT}</span>
+        <NameInput id="name" name="name" className="input" autoComplete="name" required />
       </div>
 
       <div className="field">
@@ -33,7 +32,6 @@ export function RegisterForm() {
           autoComplete="tel"
           placeholder="09171234567"
         />
-        <span className="hint">{MOBILE_HINT}</span>
       </div>
 
       <div className="field">

@@ -5,8 +5,7 @@ import {
   countRegistrations,
   displayName,
   nextUp,
-  sessionCapacity,
-  statusForJoin,
+  courtSeats,
   waitlistPromotions,
   type BoardPlayer,
   type RegistrationStatus,
@@ -14,52 +13,66 @@ import {
 
 const rows = (...statuses: RegistrationStatus[]) => statuses.map((status) => ({ status }));
 
-describe("sessionCapacity", () => {
+describe("courtSeats", () => {
   it("multiplies courts by the seats each court holds", () => {
-    expect(sessionCapacity(3, 4)).toBe(12);
-    expect(sessionCapacity(7, 4)).toBe(28);
+    expect(courtSeats(3, 4)).toBe(12);
+    expect(courtSeats(7, 4)).toBe(28);
   });
 
   it("never returns a negative capacity", () => {
-    expect(sessionCapacity(-2, 4)).toBe(0);
+    expect(courtSeats(-2, 4)).toBe(0);
   });
 });
 
 describe("countRegistrations", () => {
-  it("counts only seat-holding statuses against capacity", () => {
+  it("counts everybody holding a place in the session", () => {
     const counts = countRegistrations(
       rows("registered", "registered", "checked_in", "playing", "waitlisted", "cancelled", "no_show"),
       8,
     );
     expect(counts.claimed).toBe(4);
     expect(counts.waitlisted).toBe(1);
-    expect(counts.spotsLeft).toBe(4);
-    expect(counts.isFull).toBe(false);
+    expect(counts.courtSeats).toBe(8);
   });
 
-  it("counts players in the building separately from seats sold", () => {
+  it("counts players in the building separately from sign-ups", () => {
     const counts = countRegistrations(rows("registered", "checked_in", "playing"), 8);
     expect(counts.claimed).toBe(3);
     expect(counts.present).toBe(2);
   });
 
-  it("cancelled players give their seat back", () => {
-    const counts = countRegistrations(rows("cancelled", "cancelled", "registered"), 4);
-    expect(counts.claimed).toBe(1);
-    expect(counts.spotsLeft).toBe(3);
+  it("takes more sign-ups than there are places on court", () => {
+    const counts = countRegistrations(rows("registered", "registered", "registered"), 2);
+    expect(counts.claimed).toBe(3);
+    expect(counts.courtsFull).toBe(false);
   });
 
-  it("clamps spotsLeft at zero when oversold", () => {
-    const counts = countRegistrations(rows("registered", "registered", "registered"), 2);
-    expect(counts.spotsLeft).toBe(0);
-    expect(counts.isFull).toBe(true);
+  it("calls the courts full only when players are actually standing on them", () => {
+    const seated = countRegistrations(rows("playing", "playing", "registered", "registered"), 2);
+    expect(seated.courtsFull).toBe(true);
+
+    const signedUp = countRegistrations(rows("registered", "registered", "registered"), 2);
+    expect(signedUp.courtsFull).toBe(false);
   });
 });
 
-describe("statusForJoin", () => {
-  it("registers while seats remain and waitlists once full", () => {
-    expect(statusForJoin(countRegistrations(rows("registered"), 2))).toBe("registered");
-    expect(statusForJoin(countRegistrations(rows("registered", "playing"), 2))).toBe("waitlisted");
+describe("countRegistrations with resting players", () => {
+  it("keeps a resting player in the session", () => {
+    const counts = countRegistrations(rows("playing", "resting", "waitlisted"), 4);
+    expect(counts.resting).toBe(1);
+    expect(counts.claimed).toBe(2);
+  });
+
+  it("counts a resting player as present, since they are still here", () => {
+    const counts = countRegistrations(rows("checked_in", "playing", "resting", "registered"), 8);
+    expect(counts.present).toBe(3);
+    expect(counts.claimed).toBe(4);
+  });
+
+  it("does not count a resting player as being on court", () => {
+    const counts = countRegistrations(rows("playing", "playing", "playing", "resting"), 4);
+    expect(counts.playing).toBe(3);
+    expect(counts.courtsFull).toBe(false);
   });
 });
 
@@ -70,13 +83,12 @@ describe("waitlistPromotions", () => {
     { id: "b", status: "waitlisted" as const, queuePosition: 2 },
   ];
 
-  it("promotes in queue order, limited by the open seats", () => {
-    expect(waitlistPromotions(waitlist, 2)).toEqual(["b"]);
-    expect(waitlistPromotions(waitlist, 3)).toEqual(["b", "c"]);
+  it("clears the whole waitlist in queue order", () => {
+    expect(waitlistPromotions(waitlist)).toEqual(["b", "c"]);
   });
 
-  it("promotes nobody when the session is still full", () => {
-    expect(waitlistPromotions(waitlist, 1)).toEqual([]);
+  it("returns nothing when nobody is waitlisted", () => {
+    expect(waitlistPromotions([waitlist[0]])).toEqual([]);
   });
 });
 

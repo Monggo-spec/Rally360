@@ -23,7 +23,8 @@ export const metadata: Metadata = { title: "Run session" };
 
 const ROSTER_STATUS_OPTIONS = [
   { value: "registered", label: "Registered" },
-  { value: "waitlisted", label: "Waitlisted" },
+  // No "Resting" here on purpose: taking a rest is the player's own call, made
+  // from their session card. The desk only sees the tag and can seat them again.
   { value: "checked_in", label: "Checked in" },
   { value: "cancelled", label: "Cancelled" },
   { value: "no_show", label: "No show" },
@@ -37,8 +38,9 @@ const SESSION_STATUS_OPTIONS = [
 ];
 
 /**
- * Players per court has no ceiling, so a 50-a-side session must not paint fifty
- * placeholder rows. Past a handful, one line carries the same information.
+ * Sessions created before the court size was fixed can still carry a large
+ * number until the sweep normalises them, so past a handful of empty places one
+ * line carries the same information as a wall of placeholder rows.
  */
 function OpenSeats({ count, courtId }: { count: number; courtId: string }) {
   if (count === 0) return null;
@@ -66,6 +68,7 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
   const waiting = detail.queue;
   const notArrived = detail.roster.filter((player) => player.status === "registered");
   const waitlisted = detail.roster.filter((player) => player.status === "waitlisted");
+  const resting = detail.roster.filter((player) => player.status === "resting");
 
   // Shared starting point so the server HTML and the first client render agree.
   const serverNow = detail.readAt;
@@ -120,14 +123,9 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
       <div className="stack" style={{ gap: 22 }}>
         <div className="kpis">
           <div className="card kpi volt">
-            <div className="kpi-label">Seats taken</div>
-            <div className="kpi-value">
-              {counts.claimed}
-              <span style={{ fontSize: 16, color: "var(--muted)" }}>/{counts.capacity}</span>
-            </div>
-            <div className="kpi-foot">
-              {detail.courts.length} courts x {detail.playersPerCourt} players
-            </div>
+            <div className="kpi-label">Signed up</div>
+            <div className="kpi-value">{counts.claimed}</div>
+            <div className="kpi-foot">No limit. Four to a court, the rest in the queue.</div>
           </div>
           <div className="card kpi">
             <div className="kpi-label">On court now</div>
@@ -149,8 +147,8 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
             <div className="kpi-foot">Registered but not checked in</div>
           </div>
           <div className="card kpi coral">
-            <div className="kpi-label">Waitlist</div>
-            <div className="kpi-value">{counts.waitlisted}</div>
+            <div className="kpi-label">In the queue</div>
+            <div className="kpi-value">{waiting.length}</div>
             <div className="kpi-foot">{formatFee(detail.feeCents)} per player</div>
           </div>
         </div>
@@ -193,10 +191,10 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
             <div>
               <span className="eyebrow">Courts in play</span>
               <h2 style={{ marginTop: 4 }}>
-                {detail.courts.length} of {allCourts.length} courts open &middot; {counts.capacity} seats
+                {detail.courts.length} of {allCourts.length} courts open &middot; {counts.courtSeats} on court at a time
               </h2>
               <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-                Open another court to add {detail.playersPerCourt} seats, or close one at any time.
+                Open another court to add {detail.playersPerCourt} more places on court, or close one at any time.
                 Players on a court you close go back to the queue.
               </p>
             </div>
@@ -339,11 +337,12 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
               <span className="eyebrow">Queue</span>
               <h2 style={{ marginTop: 4 }}>
                 {waiting.length} checked in, waiting for a court
+                {resting.length > 0 ? `, ${resting.length} resting` : ""}
               </h2>
             </div>
           </div>
           <div className="panel-body">
-            {waiting.length === 0 ? (
+            {waiting.length === 0 && resting.length === 0 ? (
               <p className="empty">Nobody is waiting. Check players in from the roster below.</p>
             ) : (
               <div className="stack" style={{ gap: 10 }}>
@@ -357,6 +356,32 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
                     </span>
                     <span className="seat-right">
                       <Elapsed since={player.checkedInAt} serverNow={serverNow} prefix="waiting" />
+                      <ActionSelect
+                        action={seatPlayerAction}
+                        name="courtId"
+                        value=""
+                        fields={{ registrationId: player.registrationId }}
+                        options={[
+                          { value: "", label: "Seat on court..." },
+                          ...detail.courts.map((court) => ({ value: court.id, label: court.label })),
+                        ]}
+                      />
+                    </span>
+                  </div>
+                ))}
+
+                {/* Resting players sit at the end of the queue, unnumbered: they are
+                    here so the desk can see and seat them, not because they are next. */}
+                {resting.map((player) => (
+                  <div className="seat" key={player.registrationId}>
+                    <span>
+                      {player.name}{" "}
+                      <span className="muted" style={{ fontWeight: 600 }}>
+                        {player.skillLevel}
+                      </span>{" "}
+                      <span className="pill warn">Take a rest</span>
+                    </span>
+                    <span className="seat-right">
                       <ActionSelect
                         action={seatPlayerAction}
                         name="courtId"

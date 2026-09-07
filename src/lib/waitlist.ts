@@ -2,32 +2,18 @@ import "server-only";
 
 import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { openPlayRegistrations, openPlaySessionCourts, openPlaySessions } from "@/db/schema";
-import { sessionCapacity, waitlistPromotions } from "./open-play";
-
-/** Capacity of a session, derived from the courts it occupies. */
-export async function capacityForSession(sessionId: string): Promise<number> {
-  const db = getDb();
-  const [session] = await db
-    .select({ playersPerCourt: openPlaySessions.playersPerCourt })
-    .from(openPlaySessions)
-    .where(eq(openPlaySessions.id, sessionId))
-    .limit(1);
-  if (!session) return 0;
-  const courtRows = await db
-    .select({ id: openPlaySessionCourts.id })
-    .from(openPlaySessionCourts)
-    .where(eq(openPlaySessionCourts.sessionId, sessionId));
-  return sessionCapacity(courtRows.length, session.playersPerCourt);
-}
+import { openPlayRegistrations } from "@/db/schema";
+import { waitlistPromotions } from "./open-play";
 
 /**
- * Pulls as many waitlisted players into real seats as the session now has room
- * for. Call this after anything that frees a seat.
+ * Clears the waitlist for a session.
+ *
+ * Open play takes everybody now - four to a court, the rest in the queue - so
+ * nothing is ever added to the waitlist. This still runs after anything that
+ * changes a roster, to sweep up rows created back when sign-ups were capped.
  */
 export async function promoteWaitlist(sessionId: string): Promise<number> {
   const db = getDb();
-  const capacity = await capacityForSession(sessionId);
   const rows = await db
     .select({
       id: openPlayRegistrations.id,
@@ -38,7 +24,7 @@ export async function promoteWaitlist(sessionId: string): Promise<number> {
     .where(eq(openPlayRegistrations.sessionId, sessionId))
     .orderBy(asc(openPlayRegistrations.queuePosition));
 
-  const promoted = waitlistPromotions(rows, capacity);
+  const promoted = waitlistPromotions(rows);
   if (promoted.length === 0) return 0;
 
   await db

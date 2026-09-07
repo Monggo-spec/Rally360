@@ -108,7 +108,7 @@ export default async function OpenPlayHistoryPage() {
                         <td className="muted">{item.courtLabels.join(", ") || "-"}</td>
                         <td>
                           <strong>
-                            {item.counts.claimed}/{item.counts.capacity}
+                            {item.counts.claimed}
                           </strong>
                         </td>
                         <td>{item.counts.present}</td>

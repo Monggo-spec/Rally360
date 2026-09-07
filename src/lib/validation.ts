@@ -45,5 +45,6 @@ export function normalizePhilippineMobile(value: string): string | null {
   return local;
 }
 
+
+/** Spelled out only when a number is refused, not as a hint before typing. */
 export const MOBILE_HINT = "11 digits starting with 09, or +63 followed by 10 digits.";
-export const NAME_HINT = "Letters only — no numbers.";

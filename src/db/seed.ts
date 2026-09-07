@@ -207,14 +207,31 @@ export async function seedClub({ demo }: { demo: boolean }) {
     { sessionId: ladder.id, courtId: courtRows[6].id },
   ]);
 
-  await db.insert(openPlayRegistrations).values(
-    members.slice(0, 5).map((member, index) => ({
+  // Both calendar sessions carry sign-ups so the seats column reads like a real
+  // week rather than a row of zeros: the ladder night is nearly sold out with a
+  // waitlist behind it, the sunrise session is filling up.
+  await db.insert(openPlayRegistrations).values([
+    // Ladder night: 3 courts x 4 = 12 seats. Eleven claimed, two waiting.
+    ...members.slice(0, 11).map((member, index) => ({
       sessionId: ladder.id,
       userId: member.id,
       status: "registered" as const,
       queuePosition: index + 1,
     })),
-  );
+    ...members.slice(11, 13).map((member, index) => ({
+      sessionId: ladder.id,
+      userId: member.id,
+      status: "waitlisted" as const,
+      queuePosition: 12 + index,
+    })),
+    // Sunrise social: 2 courts x 4 = 8 seats, five taken.
+    ...members.slice(2, 7).map((member, index) => ({
+      sessionId: sunrise.id,
+      userId: member.id,
+      status: "registered" as const,
+      queuePosition: index + 1,
+    })),
+  ]);
 
   // A handful of private court reservations on the courts open play is not using.
   await db.insert(bookings).values([

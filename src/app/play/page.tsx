@@ -25,7 +25,10 @@ export default async function MemberHome() {
   const mySessions = sessions.filter(
     (item) => item.myStatus && item.myStatus !== "cancelled" && item.myStatus !== "no_show",
   );
-  const seatsToday = todaySessions.reduce((total, item) => total + item.counts.spotsLeft, 0);
+  // Open play never runs out of places, so the useful number is how many of
+  // today's players are on a court right now rather than seats remaining.
+  const playingToday = todaySessions.reduce((total, item) => total + item.counts.playing, 0);
+  const courtSeatsToday = todaySessions.reduce((total, item) => total + item.counts.courtSeats, 0);
 
   return (
     <AppShell
@@ -57,8 +60,11 @@ export default async function MemberHome() {
             </div>
           </div>
           <div className="card kpi amber">
-            <div className="kpi-label">Open play seats left today</div>
-            <div className="kpi-value">{seatsToday}</div>
+            <div className="kpi-label">On court in open play</div>
+            <div className="kpi-value">
+              {playingToday}
+              <span style={{ fontSize: 16, color: "var(--muted)" }}>/{courtSeatsToday}</span>
+            </div>
             <div className="kpi-foot">
               Across {todaySessions.length} session{todaySessions.length === 1 ? "" : "s"}
             </div>

@@ -1,14 +1,44 @@
 "use client";
 
 import { useActionState } from "react";
-import { createSessionAction } from "@/lib/actions/admin";
-import { CLOSE_HOUR, OPEN_HOUR, PLAYERS_PER_COURT } from "@/lib/config";
+import { createSessionAction, updateSessionAction } from "@/lib/actions/admin";
+import { CLOSE_HOUR, OPEN_HOUR } from "@/lib/config";
 import { bookableDateKeys, formatDayLabel, formatTime, slotStart, todayKey } from "@/lib/schedule";
 
 const HOURS = Array.from({ length: CLOSE_HOUR - OPEN_HOUR + 1 }, (_, index) => OPEN_HOUR + index);
 
-export function SessionForm({ courts }: { courts: { id: string; label: string; status: string }[] }) {
-  const [state, formAction, pending] = useActionState(createSessionAction, undefined);
+/** The values an existing session opens the form with. */
+export type SessionFormValues = {
+  id: string;
+  title: string;
+  dateKey: string;
+  startHour: number;
+  endHour: number;
+  skillLevel: "all" | "beginner" | "intermediate" | "advanced";
+  feePesos: number;
+  notes: string | null;
+};
+
+/**
+ * One form for scheduling and for editing, so a session can never be created
+ * with values its own edit screen would refuse.
+ *
+ * Courts are picked here only when creating. On an existing session they are
+ * opened and closed from the run page, which knows how to return players
+ * standing on a court and how to refuse one a member has reserved.
+ */
+export function SessionForm({
+  courts,
+  session,
+}: {
+  courts: { id: string; label: string; status: string }[];
+  session?: SessionFormValues;
+}) {
+  const editing = session !== undefined;
+  const [state, formAction, pending] = useActionState(
+    editing ? updateSessionAction : createSessionAction,
+    undefined,
+  );
   const days = bookableDateKeys();
   const today = todayKey();
 
@@ -16,19 +46,47 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
     hour === 24 ? "12:00 AM" : formatTime(slotStart(today, Math.min(hour, 23)));
 
   return (
-    <form action={formAction} className="stack">
+    <form
+      action={formAction}
+      className="stack"
+      // Keyed on the saved values, not just the id: the fields are uncontrolled,
+      // so after a save the revalidated props alone would leave the old values
+      // sitting under an "updated" message, which reads as a failed save.
+      key={
+        session
+          ? [
+              session.id,
+              session.title,
+              session.dateKey,
+              session.startHour,
+              session.endHour,
+              session.skillLevel,
+              session.feePesos,
+              session.notes ?? "",
+            ].join("|")
+          : "new"
+      }
+    >
+      {editing ? <input type="hidden" name="sessionId" value={session.id} /> : null}
       {state?.error ? <p className="alert error">{state.error}</p> : null}
       {state?.success ? <p className="alert success">{state.success}</p> : null}
 
       <div className="field">
         <label htmlFor="title">Session name</label>
-        <input id="title" name="title" className="input" placeholder="Weeknight Open Play" required />
+        <input
+          id="title"
+          name="title"
+          className="input"
+          placeholder="Weeknight Open Play"
+          defaultValue={session?.title ?? ""}
+          required
+        />
       </div>
 
       <div className="field-row">
         <div className="field">
           <label htmlFor="dateKey">Date</label>
-          <select id="dateKey" name="dateKey" className="input" defaultValue={today}>
+          <select id="dateKey" name="dateKey" className="input" defaultValue={session?.dateKey ?? today}>
             {days.map((key) => (
               <option key={key} value={key}>
                 {key === today ? `Today, ${formatDayLabel(key)}` : formatDayLabel(key)}
@@ -38,7 +96,7 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
         </div>
         <div className="field">
           <label htmlFor="startHour">Starts</label>
-          <select id="startHour" name="startHour" className="input" defaultValue="18">
+          <select id="startHour" name="startHour" className="input" defaultValue={session?.startHour ?? 18}>
             {HOURS.slice(0, -1).map((hour) => (
               <option key={hour} value={hour}>
                 {hourLabel(hour)}
@@ -48,7 +106,7 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
         </div>
         <div className="field">
           <label htmlFor="endHour">Ends</label>
-          <select id="endHour" name="endHour" className="input" defaultValue="21">
+          <select id="endHour" name="endHour" className="input" defaultValue={session?.endHour ?? 21}>
             {HOURS.slice(1).map((hour) => (
               <option key={hour} value={hour}>
                 {hourLabel(hour)}
@@ -58,6 +116,7 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
         </div>
       </div>
 
+      {editing ? null : (
       <div className="field">
         <label>Courts used by this session</label>
         <div className="row" style={{ gap: 8 }}>
@@ -78,16 +137,13 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
             </label>
           ))}
         </div>
-        <span className="hint">
-          Capacity is courts x players per court. Three courts at {PLAYERS_PER_COURT} players is{" "}
-          {3 * PLAYERS_PER_COURT} seats.
-        </span>
       </div>
+      )}
 
       <div className="field-row">
         <div className="field">
           <label htmlFor="skillLevel">Skill level</label>
-          <select id="skillLevel" name="skillLevel" className="input" defaultValue="all">
+          <select id="skillLevel" name="skillLevel" className="input" defaultValue={session?.skillLevel ?? "all"}>
             <option value="all">All levels</option>
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
@@ -95,30 +151,38 @@ export function SessionForm({ courts }: { courts: { id: string; label: string; s
           </select>
         </div>
         <div className="field">
-          <label htmlFor="playersPerCourt">Players per court</label>
+          <label htmlFor="feePesos">Fee (PHP)</label>
           <input
-            id="playersPerCourt"
-            name="playersPerCourt"
+            id="feePesos"
+            name="feePesos"
             className="input"
             type="number"
-            min={1}
-            defaultValue={PLAYERS_PER_COURT}
+            min={0}
+            defaultValue={session?.feePesos ?? 250}
           />
-          <span className="hint">No maximum. Put as many players on a court as you run.</span>
-        </div>
-        <div className="field">
-          <label htmlFor="feePesos">Fee (PHP)</label>
-          <input id="feePesos" name="feePesos" className="input" type="number" min={0} defaultValue={250} />
         </div>
       </div>
 
       <div className="field">
         <label htmlFor="notes">Notes for members (optional)</label>
-        <textarea id="notes" name="notes" className="input" rows={2} maxLength={300} />
+        <textarea
+          id="notes"
+          name="notes"
+          className="input"
+          rows={2}
+          maxLength={300}
+          defaultValue={session?.notes ?? ""}
+        />
       </div>
 
       <button type="submit" className="button" disabled={pending}>
-        {pending ? "Scheduling..." : "Schedule session"}
+        {pending
+          ? editing
+            ? "Saving..."
+            : "Scheduling..."
+          : editing
+            ? "Save changes"
+            : "Schedule session"}
       </button>
     </form>
   );

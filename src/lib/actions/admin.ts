@@ -25,12 +25,14 @@ function refreshAdminViews(sessionId?: string) {
   revalidatePath("/admin/open-play");
   // A status change moves a session between the running list and the history.
   revalidatePath("/admin/open-play/history");
+  if (sessionId) revalidatePath(`/admin/open-play/${sessionId}/edit`);
   revalidatePath("/admin/courts");
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/members");
   revalidatePath("/admin/waitlist");
   revalidatePath("/play");
   revalidatePath("/play/open-play");
+  revalidatePath("/play/open-play/[id]", "page");
   revalidatePath("/display");
   if (sessionId) revalidatePath(`/admin/open-play/${sessionId}`);
 }
@@ -42,9 +44,6 @@ const createSessionSchema = z
     startHour: z.coerce.number().int().min(OPEN_HOUR).max(CLOSE_HOUR - 1),
     endHour: z.coerce.number().int().min(OPEN_HOUR + 1).max(CLOSE_HOUR),
     skillLevel: z.enum(["all", ...SKILL_LEVELS]),
-    // No upper bound: a club may want a big free-for-all on one court. One is
-    // the floor only because a court that seats nobody has no capacity at all.
-    playersPerCourt: z.coerce.number().int().min(1).default(PLAYERS_PER_COURT),
     feePesos: z.coerce.number().min(0).max(100000).default(0),
     notes: z.string().trim().max(300).optional(),
   })
@@ -65,7 +64,6 @@ export async function createSessionAction(_previous: FormState, formData: FormDa
     startHour: formData.get("startHour"),
     endHour: formData.get("endHour"),
     skillLevel: formData.get("skillLevel"),
-    playersPerCourt: formData.get("playersPerCourt"),
     feePesos: formData.get("feePesos"),
     notes: formData.get("notes") || undefined,
   });
@@ -74,7 +72,7 @@ export async function createSessionAction(_previous: FormState, formData: FormDa
     return fail(Object.values(first.fieldErrors).flat()[0] ?? first.formErrors[0] ?? "Check the form.");
   }
 
-  const { title, dateKey, startHour, endHour, skillLevel, playersPerCourt, feePesos, notes } = parsed.data;
+  const { title, dateKey, startHour, endHour, skillLevel, feePesos, notes } = parsed.data;
   if (!isBookableDate(dateKey)) return fail("That date is outside the scheduling window.");
 
   const db = getDb();
@@ -85,7 +83,8 @@ export async function createSessionAction(_previous: FormState, formData: FormDa
       startsAt: slotStart(dateKey, startHour),
       endsAt: slotStart(dateKey, endHour),
       skillLevel,
-      playersPerCourt,
+      // Four to a court, always. Everybody past that waits in the queue.
+      playersPerCourt: PLAYERS_PER_COURT,
       feeCents: Math.round(feePesos * 100),
       notes: notes ?? null,
       createdBy: admin.id,
@@ -99,8 +98,103 @@ export async function createSessionAction(_previous: FormState, formData: FormDa
   refreshAdminViews(created.id);
   return ok(
     `${title} scheduled on ${courtIds.length} court${courtIds.length === 1 ? "" : "s"} (${
-      courtIds.length * playersPerCourt
+      courtIds.length * PLAYERS_PER_COURT
     } seats).`,
+  );
+}
+
+/**
+ * Edits a scheduled session's details. Courts are deliberately not editable
+ * here - they are added and removed on the run page, where the checks for
+ * clashing member reservations and for players standing on a closed court live.
+ */
+export async function updateSessionAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  await requireActionUser("admin");
+  await ensureAppReady();
+
+  const sessionId = z.uuid().safeParse(formData.get("sessionId"));
+  if (!sessionId.success) return fail("That session could not be found.");
+
+  const parsed = createSessionSchema.safeParse({
+    title: formData.get("title"),
+    dateKey: formData.get("dateKey"),
+    startHour: formData.get("startHour"),
+    endHour: formData.get("endHour"),
+    skillLevel: formData.get("skillLevel"),
+    feePesos: formData.get("feePesos"),
+    notes: formData.get("notes") || undefined,
+  });
+  if (!parsed.success) {
+    const issues = z.flattenError(parsed.error);
+    return fail(Object.values(issues.fieldErrors).flat()[0] ?? issues.formErrors[0] ?? "Check the form.");
+  }
+
+  const { title, dateKey, startHour, endHour, skillLevel, feePesos, notes } = parsed.data;
+  if (!isBookableDate(dateKey)) return fail("That date is outside the scheduling window.");
+
+  const db = getDb();
+  const [existing] = await db
+    .select()
+    .from(openPlaySessions)
+    .where(eq(openPlaySessions.id, sessionId.data))
+    .limit(1);
+  if (!existing) return fail("That session could not be found.");
+
+  const startsAt = slotStart(dateKey, startHour);
+  const endsAt = slotStart(dateKey, endHour);
+
+  // Moving a session can walk it onto a court a member already reserved.
+  const sessionCourts = await db
+    .select({ id: courts.id, label: courts.label })
+    .from(openPlaySessionCourts)
+    .innerJoin(courts, eq(courts.id, openPlaySessionCourts.courtId))
+    .where(eq(openPlaySessionCourts.sessionId, existing.id))
+    .orderBy(asc(courts.sortOrder));
+
+  for (const court of sessionCourts) {
+    const clashing = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.courtId, court.id),
+          eq(bookings.status, "confirmed"),
+          lt(bookings.startsAt, endsAt),
+          gt(bookings.endsAt, startsAt),
+        ),
+      );
+    if (clashing.length > 0) {
+      return fail(
+        `${court.label} has ${clashing.length} member reservation${
+          clashing.length === 1 ? "" : "s"
+        } at that time. Move the session, or cancel those first.`,
+      );
+    }
+  }
+
+  await db
+    .update(openPlaySessions)
+    .set({
+      title,
+      startsAt,
+      endsAt,
+      skillLevel,
+      // Saving an old session is also what brings it down to four a court.
+      playersPerCourt: PLAYERS_PER_COURT,
+      feeCents: Math.round(feePesos * 100),
+      notes: notes ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(openPlaySessions.id, existing.id));
+
+  await promoteWaitlist(existing.id);
+
+  refreshAdminViews(existing.id);
+  const seats = sessionCourts.length * PLAYERS_PER_COURT;
+  return ok(
+    `${title} updated. ${seats} on court at a time across ${sessionCourts.length} court${
+      sessionCourts.length === 1 ? "" : "s"
+    }.`,
   );
 }
 
@@ -138,7 +232,15 @@ export async function setSessionStatusAction(_previous: FormState, formData: For
 
 const registrationStatusSchema = z.object({
   registrationId: z.uuid(),
-  status: z.enum(["registered", "waitlisted", "checked_in", "playing", "cancelled", "no_show"]),
+  status: z.enum([
+    "registered",
+    "waitlisted",
+    "checked_in",
+    "playing",
+    "resting",
+    "cancelled",
+    "no_show",
+  ]),
 });
 
 export async function setRegistrationStatusAction(
@@ -163,10 +265,23 @@ export async function setRegistrationStatusAction(
   if (!registration) return fail("That player is not on this session.");
 
   const { status } = parsed.data;
+
+  // Ending a rest sends the player to the back of the queue. Restoring the
+  // position they held before resting would jump everybody who waited them out.
+  let queuePosition = registration.queuePosition;
+  if (registration.status === "resting" && status === "checked_in") {
+    const rows = await db
+      .select({ queuePosition: openPlayRegistrations.queuePosition })
+      .from(openPlayRegistrations)
+      .where(eq(openPlayRegistrations.sessionId, registration.sessionId));
+    queuePosition = rows.reduce((max, row) => Math.max(max, row.queuePosition), 0) + 1;
+  }
+
   await db
     .update(openPlayRegistrations)
     .set({
       status,
+      queuePosition,
       checkedInAt: status === "checked_in" && !registration.checkedInAt ? new Date() : registration.checkedInAt,
       // Anything other than actively playing takes the player off the court, and
       // ends the stint the "time on court" clock was measuring.

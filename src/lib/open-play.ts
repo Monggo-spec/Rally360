@@ -5,72 +5,89 @@ export type RegistrationStatus =
   | "waitlisted"
   | "checked_in"
   | "playing"
+  /** Sitting one out, still in the session and free to rejoin the queue. */
+  | "resting"
   | "cancelled"
   | "no_show";
 
-/** Statuses that consume one of the session's seats. */
-export const SEAT_HOLDING_STATUSES: RegistrationStatus[] = ["registered", "checked_in", "playing"];
+/**
+ * Statuses that consume one of the session's seats.
+ *
+ * Resting holds a seat on purpose: a player taking a breather has not left, and
+ * releasing their seat would let the waitlist take it and lock them out of the
+ * session they paid for.
+ */
+export const SEAT_HOLDING_STATUSES: RegistrationStatus[] = [
+  "registered",
+  "checked_in",
+  "playing",
+  "resting",
+];
 
-export function sessionCapacity(courtCount: number, playersPerCourt = PLAYERS_PER_COURT): number {
+/**
+ * How many players can stand on the session's courts at once.
+ *
+ * This is NOT a limit on sign-ups. Open play takes everybody who turns up; the
+ * courts hold four at a time and the rest of the club waits in the queue.
+ */
+export function courtSeats(courtCount: number, playersPerCourt = PLAYERS_PER_COURT): number {
   return Math.max(0, courtCount) * Math.max(0, playersPerCourt);
 }
 
 export type SessionCounts = {
-  capacity: number;
+  /** Places on court, all courts together. Not a cap on joining. */
+  courtSeats: number;
   registered: number;
   waitlisted: number;
   checkedIn: number;
   playing: number;
-  /** Seats actually taken. Waitlisted players do not hold a seat. */
+  /** Sitting one out but still here. */
+  resting: number;
+  /** Everybody signed up for this session. */
   claimed: number;
-  /** Players physically in the building. */
+  /** Players physically in the building, resting ones included. */
   present: number;
-  spotsLeft: number;
-  isFull: boolean;
+  /** Every court is full, so the next player waits for a rotation. */
+  courtsFull: boolean;
 };
 
 export function countRegistrations(
   rows: { status: RegistrationStatus }[],
-  capacity: number,
+  seats: number,
 ): SessionCounts {
   const tally = (status: RegistrationStatus) => rows.filter((row) => row.status === status).length;
   const registered = tally("registered");
   const waitlisted = tally("waitlisted");
   const checkedIn = tally("checked_in");
   const playing = tally("playing");
-  const claimed = registered + checkedIn + playing;
+  const resting = tally("resting");
   return {
-    capacity,
+    courtSeats: seats,
     registered,
     waitlisted,
     checkedIn,
     playing,
-    claimed,
-    present: checkedIn + playing,
-    spotsLeft: Math.max(0, capacity - claimed),
-    isFull: claimed >= capacity,
+    resting,
+    claimed: registered + checkedIn + playing + resting,
+    present: checkedIn + playing + resting,
+    // Measured against players actually on court, not against sign-ups: a
+    // hundred people can be in the session with every court still half empty.
+    courtsFull: seats > 0 && playing >= seats,
   };
 }
 
-/** A join lands on the waitlist only once every seat is claimed. */
-export function statusForJoin(counts: SessionCounts): "registered" | "waitlisted" {
-  return counts.isFull ? "waitlisted" : "registered";
-}
-
 /**
- * Ids to pull off the waitlist, in queue order, once seats free up.
- * Returns at most as many ids as there are open seats.
+ * Ids to pull off the waitlist, in queue order.
+ *
+ * Open play no longer turns anybody away, so this returns every waitlisted
+ * player. It exists to clear rows left over from when sign-ups were capped.
  */
 export function waitlistPromotions(
   rows: { id: string; status: RegistrationStatus; queuePosition: number }[],
-  capacity: number,
 ): string[] {
-  const counts = countRegistrations(rows, capacity);
-  if (counts.spotsLeft === 0) return [];
   return rows
     .filter((row) => row.status === "waitlisted")
     .sort((a, b) => a.queuePosition - b.queuePosition)
-    .slice(0, counts.spotsLeft)
     .map((row) => row.id);
 }
 

@@ -23,7 +23,7 @@ export default async function OpenPlayPage() {
       session={session}
       variant="member"
       title="Open play"
-      subtitle={`Every court seats ${PLAYERS_PER_COURT} players. When the seats run out you join a real waitlist.`}
+      subtitle={`Every court holds ${PLAYERS_PER_COURT} players. Everybody else waits in the queue for the next rotation.`}
     >
       {sessions.length === 0 ? (
         <p className="empty">No open play sessions on the calendar yet. The club posts them a week ahead.</p>

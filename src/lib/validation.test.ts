@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stripNonNameCharacters } from "./name-characters";
 import { isPersonName, normalizePhilippineMobile, tidyName } from "./validation";
 
 describe("isPersonName", () => {
@@ -72,5 +73,24 @@ describe("normalizePhilippineMobile", () => {
     expect(normalizePhilippineMobile("0917abc4567")).toBeNull();
     expect(normalizePhilippineMobile("")).toBeNull();
     expect(normalizePhilippineMobile("not a number")).toBeNull();
+  });
+});
+
+describe("stripNonNameCharacters", () => {
+  it("drops digits as they are typed", () => {
+    expect(stripNonNameCharacters("21212")).toBe("");
+    expect(stripNonNameCharacters("Ana2 Reyes3")).toBe("Ana Reyes");
+  });
+
+  it("keeps every character a real name carries", () => {
+    for (const name of ["Ma. Anna G. Louie", "Dela Cruz-Santos", "O'Brien", "Peña", "Jose Ángel"]) {
+      expect(stripNonNameCharacters(name), name).toBe(name);
+    }
+  });
+
+  it("leaves behind only what isPersonName would accept", () => {
+    const cleaned = stripNonNameCharacters("Ana 123 Reyes!");
+    expect(cleaned).toBe("Ana  Reyes");
+    expect(isPersonName(cleaned)).toBe(true);
   });
 });

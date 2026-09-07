@@ -1,5 +1,11 @@
+import Link from "next/link";
 import { ActionButton } from "@/components/action-button";
-import { joinSessionAction, leaveSessionAction } from "@/lib/actions/sessions";
+import {
+  joinSessionAction,
+  leaveSessionAction,
+  returnFromRestAction,
+  takeRestAction,
+} from "@/lib/actions/sessions";
 import type { SessionSummary } from "@/lib/queries";
 import { formatDayLabel, formatTime, dateKey } from "@/lib/schedule";
 
@@ -15,6 +21,7 @@ const MY_STATUS_LABEL: Record<string, { label: string; tone: string }> = {
   waitlisted: { label: "Waitlisted", tone: "warn" },
   checked_in: { label: "Checked in", tone: "volt" },
   playing: { label: "On court", tone: "volt" },
+  resting: { label: "Resting", tone: "warn" },
   cancelled: { label: "You left", tone: "grey" },
   no_show: { label: "Marked no-show", tone: "danger" },
 };
@@ -25,7 +32,10 @@ export function formatFee(feeCents: number) {
 
 export function SessionCard({ session, showJoin = true }: { session: SessionSummary; showJoin?: boolean }) {
   const { counts } = session;
-  const fillPercent = counts.capacity === 0 ? 0 : Math.min(100, (counts.claimed / counts.capacity) * 100);
+  // The bar tracks how full the courts are, not how many signed up: sign-ups
+  // have no ceiling, so measuring against them would never fill or mean much.
+  const fillPercent =
+    counts.courtSeats === 0 ? 0 : Math.min(100, (counts.playing / counts.courtSeats) * 100);
   const mine = session.myStatus ? MY_STATUS_LABEL[session.myStatus] : undefined;
   const onList = session.myStatus && session.myStatus !== "cancelled" && session.myStatus !== "no_show";
 
@@ -60,28 +70,45 @@ export function SessionCard({ session, showJoin = true }: { session: SessionSumm
       <div>
         <div className="capacity-bar">
           <div
-            className={`capacity-fill${counts.isFull ? " full" : ""}`}
+            className={`capacity-fill${counts.courtsFull ? " full" : ""}`}
             style={{ width: `${fillPercent}%` }}
           />
         </div>
         <div className="count-row" style={{ marginTop: 10 }}>
           <span>
-            <b>
-              {counts.claimed}/{counts.capacity}
-            </b>{" "}
-            seats taken
-          </span>
-          <span>
-            <b>{counts.present}</b> in the building
-          </span>
-          <span>
-            <b>{counts.waitlisted}</b> waitlisted
+            <b>{counts.claimed}</b> joined &middot; <b>{counts.playing}</b> of {counts.courtSeats} on
+            court
           </span>
         </div>
       </div>
 
+      {showJoin && onList ? (
+        <Link className="button ghost small" href={`/play/open-play/${session.id}`}>
+          See who is playing and where you stand
+        </Link>
+      ) : null}
+
       {showJoin ? (
-        <div className="row">
+        <div className="row session-actions">
+          {/* Resting keeps the seat, so it sits beside Leave rather than replacing it. */}
+          {session.myStatus === "resting" ? (
+            <ActionButton
+              action={returnFromRestAction}
+              fields={{ sessionId: session.id }}
+              label="I am back"
+              variant="volt"
+            />
+          ) : session.myStatus === "playing" ||
+            session.myStatus === "checked_in" ||
+            session.myStatus === "registered" ? (
+            <ActionButton
+              action={takeRestAction}
+              fields={{ sessionId: session.id }}
+              label="Take a rest"
+              variant="ghost"
+            />
+          ) : null}
+
           {onList ? (
             <ActionButton
               action={leaveSessionAction}
@@ -94,8 +121,8 @@ export function SessionCard({ session, showJoin = true }: { session: SessionSumm
             <ActionButton
               action={joinSessionAction}
               fields={{ sessionId: session.id }}
-              label={counts.isFull ? "Join the waitlist" : `Join (${counts.spotsLeft} left)`}
-              variant={counts.isFull ? "ghost" : "primary"}
+              label="Join"
+              variant="primary"
             />
           )}
         </div>

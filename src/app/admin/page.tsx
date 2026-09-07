@@ -142,7 +142,7 @@ export default async function AdminOverviewPage() {
                       <b>{item.counts.checkedIn}</b> waiting
                     </span>
                     <span>
-                      <b>{item.counts.waitlisted}</b> waitlisted
+                      <b>{item.counts.claimed}</b> signed up
                     </span>
                   </div>
                   <Link className="button small" href={`/admin/open-play/${item.id}`}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef } from "react";
+import { useTransientFeedback } from "@/components/use-transient-feedback";
 import type { FormState } from "@/lib/form-state";
 
 type ServerAction = (state: FormState, formData: FormData) => Promise<FormState>;
@@ -21,7 +22,8 @@ export function ActionSelect({
   fields?: Record<string, string>;
   label?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const [rawState, formAction, pending] = useActionState(action, undefined);
+  const state = useTransientFeedback(rawState);
   const formRef = useRef<HTMLFormElement>(null);
 
   return (

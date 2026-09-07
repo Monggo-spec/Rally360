@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { updateProfileAction } from "@/lib/actions/profile";
-import { MOBILE_HINT, NAME_HINT } from "@/lib/validation";
+import { NameInput } from "@/components/name-input";
 
 export function ProfileForm({
   name,
@@ -30,7 +30,7 @@ export function ProfileForm({
 
       <div className="field">
         <label htmlFor="name">Full name</label>
-        <input
+        <NameInput
           id="name"
           name="name"
           className="input"
@@ -38,7 +38,6 @@ export function ProfileForm({
           autoComplete="name"
           required
         />
-        <span className="hint">{NAME_HINT}</span>
       </div>
 
       <div className="field">
@@ -52,7 +51,6 @@ export function ProfileForm({
           autoComplete="tel"
           placeholder="09171234567"
         />
-        <span className="hint">{MOBILE_HINT}</span>
       </div>
 
       <div className="field">

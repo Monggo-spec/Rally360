@@ -38,6 +38,11 @@ export function slotStart(key: string, hour: number): Date {
   return fromZonedTime(`${key} ${String(hour).padStart(2, "0")}:00:00`, TIME_ZONE);
 }
 
+/** The club-local hour an instant falls on, as the grid and forms number them. */
+export function hourOf(instant: Date): number {
+  return Number(formatInTimeZone(instant, TIME_ZONE, "H"));
+}
+
 /** The UTC window covering one local calendar day, for range queries. */
 export function dayBounds(key: string): Interval {
   const startsAt = fromZonedTime(`${key} 00:00:00`, TIME_ZONE);

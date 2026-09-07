@@ -34,13 +34,13 @@ export default async function AdminWaitlistPage() {
     >
       {groups.length === 0 ? (
         <p className="empty">
-          No waitlisted players. Members only land here once a session has sold every seat.
+          No waitlisted players. Open play takes everybody now, so nothing new lands
+          here - this page only clears rows left over from when sign-ups were capped.
         </p>
       ) : (
         <div className="stack" style={{ gap: 22 }}>
           {groups.map(({ session: openPlay, players }) => {
             const { counts } = openPlay;
-            const seatsFree = counts.spotsLeft;
 
             return (
               <section className="card" key={openPlay.id}>
@@ -55,12 +55,7 @@ export default async function AdminWaitlistPage() {
                     </p>
                   </div>
                   <div className="row" style={{ gap: 8 }}>
-                    <span className={`pill ${seatsFree > 0 ? "volt" : "danger"}`}>
-                      {seatsFree > 0 ? `${seatsFree} seat${seatsFree === 1 ? "" : "s"} free` : "Full"}
-                    </span>
-                    <span className="pill grey">
-                      {counts.claimed}/{counts.capacity} taken
-                    </span>
+                    <span className="pill grey">{counts.claimed} signed up</span>
                     <Link className="button quiet small" href={`/admin/open-play/${openPlay.id}`}>
                       Run session
                     </Link>
@@ -101,13 +96,8 @@ export default async function AdminWaitlistPage() {
                                     registrationId: player.registrationId,
                                     status: "registered",
                                   }}
-                                  label={seatsFree > 0 ? "Accept" : "Accept anyway"}
-                                  variant={seatsFree > 0 ? "primary" : "quiet"}
-                                  confirm={
-                                    seatsFree > 0
-                                      ? undefined
-                                      : `${openPlay.title} is full at ${counts.claimed}/${counts.capacity}. Accept ${player.name} anyway and oversell by one?`
-                                  }
+                                  label="Accept"
+                                  variant="primary"
                                 />
                                 <ActionButton
                                   action={setRegistrationStatusAction}

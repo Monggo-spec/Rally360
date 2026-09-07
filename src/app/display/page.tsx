@@ -84,7 +84,7 @@ export default async function DisplayPage({ searchParams }: PageProps<"/display"
               {session.title} &middot; {formatRange(session)}
             </span>
             <span>
-              {session.counts.claimed}/{session.counts.capacity} seats &middot; {session.counts.waitlisted} waitlisted
+              {session.counts.playing} of {session.counts.courtSeats} on court &middot; {session.counts.claimed} in this session
             </span>
           </div>
 
