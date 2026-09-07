@@ -11,7 +11,7 @@ let bootstrapPromise: Promise<void> | undefined;
  * the demo password is printed in the README, so anybody who finds the URL can
  * sign in as the club admin. Turn it off before the club depends on this.
  */
-function shouldSeedDemoData() {
+export function shouldSeedDemoData() {
   if (process.env.SEED_DEMO_DATA === "true") return true;
   if (process.env.SEED_DEMO_DATA === "false") return false;
   return process.env.NODE_ENV !== "production";

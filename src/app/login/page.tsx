@@ -4,6 +4,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { LoginForm } from "@/components/login-form";
+import { shouldSeedDemoData } from "@/db/bootstrap";
+import { DEMO_PASSWORD } from "@/db/seed";
 import { getSession } from "@/lib/auth";
 import { BRAND } from "@/lib/brand";
 
@@ -35,10 +37,17 @@ export default async function LoginPage() {
             <h1>Welcome back</h1>
           </div>
           <LoginForm />
-          <p className="demo-note">
-            <strong>Demo accounts.</strong> Admin: <code>admin@example.com</code>. Member:{" "}
-            <code>ana@example.com</code>. Password for both: <code>pickleball123</code>.
-          </p>
+          {/*
+            Only where those accounts actually exist. Printed unconditionally it
+            hands a password to every visitor of a real club's sign-in page, and
+            offers logins that were never seeded.
+          */}
+          {shouldSeedDemoData() ? (
+            <p className="demo-note">
+              <strong>Demo accounts.</strong> Admin: <code>admin@example.com</code>. Member:{" "}
+              <code>ana@example.com</code>. Password for both: <code>{DEMO_PASSWORD}</code>.
+            </p>
+          ) : null}
         </div>
       </section>
     </div>
