@@ -102,6 +102,15 @@ export async function takeRestAction(_previous: FormState, formData: FormData): 
   const sessionId = z.uuid().safeParse(formData.get("sessionId"));
   if (!sessionId.success) return fail("That session could not be found.");
 
+  const [openPlay] = await getDb()
+    .select({ status: openPlaySessions.status })
+    .from(openPlaySessions)
+    .where(eq(openPlaySessions.id, sessionId.data))
+    .limit(1);
+  if (!openPlay) return fail("That session could not be found.");
+  // Nothing to sit out of until play starts.
+  if (openPlay.status !== "live") return fail("That session has not started yet.");
+
   const mine = await myRegistration(sessionId.data, user.id);
   if (!mine) return fail("You are not in that session.");
   if (mine.status === "resting") return ok("You are already resting.");

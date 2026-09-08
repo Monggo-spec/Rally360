@@ -38,6 +38,8 @@ export function SessionCard({ session, showJoin = true }: { session: SessionSumm
     counts.courtSeats === 0 ? 0 : Math.min(100, (counts.playing / counts.courtSeats) * 100);
   const mine = session.myStatus ? MY_STATUS_LABEL[session.myStatus] : undefined;
   const onList = session.myStatus && session.myStatus !== "cancelled" && session.myStatus !== "no_show";
+  /** Play is under way, so there are courts to stand on and a queue to be in. */
+  const started = session.status === "live";
 
   return (
     <article className="card session">
@@ -82,7 +84,19 @@ export function SessionCard({ session, showJoin = true }: { session: SessionSumm
         </div>
       </div>
 
-      {showJoin && onList ? (
+      {/*
+        Courts, queue and resting only mean something once play has started. A
+        member who joins a session next Tuesday is on a list and nothing more,
+        so the card says so and keeps the rest out of the way until it is live.
+      */}
+      {showJoin && onList && !started ? (
+        <p className="muted" style={{ fontSize: 13, lineHeight: 1.55 }}>
+          You are on the list. The courts and the queue open when the session
+          starts.
+        </p>
+      ) : null}
+
+      {showJoin && onList && started ? (
         <Link className="button ghost small" href={`/play/open-play/${session.id}`}>
           See who is playing and where you stand
         </Link>
@@ -91,7 +105,7 @@ export function SessionCard({ session, showJoin = true }: { session: SessionSumm
       {showJoin ? (
         <div className="row session-actions">
           {/* Resting keeps the seat, so it sits beside Leave rather than replacing it. */}
-          {session.myStatus === "resting" ? (
+          {!started ? null : session.myStatus === "resting" ? (
             <ActionButton
               action={returnFromRestAction}
               fields={{ sessionId: session.id }}

@@ -50,7 +50,7 @@ export default async function MemberSessionBoardPage({ params }: PageProps<"/pla
               }
             : { tone: "grey", head: "You are not in this session", body: "Join it from the open play list." };
 
-  return (
+  const shell = (children: React.ReactNode) => (
     <AppShell
       session={session}
       variant="member"
@@ -62,6 +62,31 @@ export default async function MemberSessionBoardPage({ params }: PageProps<"/pla
         </Link>
       }
     >
+      {children}
+    </AppShell>
+  );
+
+  // Before the desk starts the session there are no courts to show and no queue
+  // to stand in - only a list of who is coming. Saying that plainly beats a
+  // board of empty courts, which reads as a session nobody turned up to.
+  if (openPlay.status !== "live") {
+    return shell(
+      <div className="card card-pad stack" style={{ gap: 10 }}>
+        <span className={`pill ${openPlay.status === "scheduled" ? "grey" : "danger"}`}>
+          {openPlay.status === "scheduled" ? "Not started yet" : openPlay.status}
+        </span>
+        <h2 style={{ fontSize: 20 }}>{openPlay.counts.claimed} signed up so far</h2>
+        <p className="muted" style={{ fontSize: 13.5, lineHeight: 1.55 }}>
+          {openPlay.status === "scheduled"
+            ? "The courts and the queue open when the front desk starts the session. Come back then to see where you stand."
+            : "This session is over, so there is nothing left on the courts."}
+        </p>
+      </div>,
+    );
+  }
+
+  return shell(
+    <>
       <div className="stack" style={{ gap: 20 }}>
         <div className="card card-pad">
           <div className="spread">
@@ -192,6 +217,6 @@ export default async function MemberSessionBoardPage({ params }: PageProps<"/pla
           </div>
         </section>
       </div>
-    </AppShell>
+    </>,
   );
 }
