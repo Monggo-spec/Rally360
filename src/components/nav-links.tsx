@@ -42,10 +42,15 @@ export function NavLinks({ variant }: { variant: "member" | "admin" }) {
       {links.map((link) => {
         const Icon = link.icon;
         const external = "external" in link && link.external;
+        // Compare whole segments, not characters: /play/bookings starts with
+        // /play/book, so a plain startsWith lights up "Book a court" as well as
+        // "My schedule". The dashboards match exactly or every link would win.
         const active =
           !external &&
           (pathname === link.href ||
-            (link.href !== "/admin" && link.href !== "/play" && pathname.startsWith(link.href)));
+            (link.href !== "/admin" &&
+              link.href !== "/play" &&
+              pathname.startsWith(`${link.href}/`)));
         const body = (
           <>
             <Icon size={18} strokeWidth={2.2} aria-hidden />
