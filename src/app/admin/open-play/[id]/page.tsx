@@ -66,7 +66,6 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
 
   const { counts } = detail;
   const waiting = detail.queue;
-  const notArrived = detail.roster.filter((player) => player.status === "registered");
   const waitlisted = detail.roster.filter((player) => player.status === "waitlisted");
   const resting = detail.roster.filter((player) => player.status === "resting");
 
@@ -137,14 +136,14 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
                   <Elapsed since={longestStint} serverNow={serverNow} warnAfterMinutes={ROTATION_MINUTES} />
                 </>
               ) : (
-                `${waiting.length} checked in and waiting`
+                `${waiting.length} waiting for a court`
               )}
             </div>
           </div>
           <div className="card kpi amber">
-            <div className="kpi-label">Not arrived</div>
-            <div className="kpi-value">{notArrived.length}</div>
-            <div className="kpi-foot">Registered but not checked in</div>
+            <div className="kpi-label">Resting</div>
+            <div className="kpi-value">{resting.length}</div>
+            <div className="kpi-foot">Sitting one out, place held</div>
           </div>
           <div className="card kpi coral">
             <div className="kpi-label">In the queue</div>
@@ -336,14 +335,14 @@ export default async function RunSessionPage({ params }: PageProps<"/admin/open-
             <div>
               <span className="eyebrow">Queue</span>
               <h2 style={{ marginTop: 4 }}>
-                {waiting.length} checked in, waiting for a court
+                {waiting.length} waiting for a court
                 {resting.length > 0 ? `, ${resting.length} resting` : ""}
               </h2>
             </div>
           </div>
           <div className="panel-body">
             {waiting.length === 0 && resting.length === 0 ? (
-              <p className="empty">Nobody is waiting. Check players in from the roster below.</p>
+              <p className="empty">Nobody is waiting. Everybody signed up is on a court.</p>
             ) : (
               <div className="stack" style={{ gap: 10 }}>
                 {waiting.map((player, index) => (

@@ -316,13 +316,11 @@ export type MemberSessionBoard = {
   session: SessionSummary;
   courts: { label: string; playersPerCourt: number; players: MemberBoardPlayer[] }[];
   queue: (MemberBoardPlayer & { position: number })[];
-  notArrived: number;
   /** Where the viewer stands, in the words the page shows them. */
   you:
     | { kind: "playing"; courtLabel: string }
     | { kind: "queued"; position: number; ahead: number }
     | { kind: "resting" }
-    | { kind: "registered" }
     | { kind: "waitlisted"; position: number }
     | { kind: "none" };
   /** Everyone sitting one out, so the queue page accounts for the whole room. */
@@ -354,9 +352,8 @@ export async function getMemberSessionBoard(
     const isYou = userIdByRegistration.get(player.registrationId) === viewerId;
     return { name: isYou ? "You" : displayName(player.name), skillLevel: player.skillLevel, isYou };
   };
-  const queueRows = roster
-    .filter((player) => player.status === "checked_in" && player.courtId === null)
-    .sort((a, b) => a.queuePosition - b.queuePosition);
+  // Same rule as the rest of the app: signing up is what puts you in the queue.
+  const queueRows = nextUp(roster);
 
   const waitlistRows = roster
     .filter((player) => player.status === "waitlisted")
@@ -376,7 +373,6 @@ export async function getMemberSessionBoard(
     })),
     queue: queueRows.map((player, index) => ({ ...label(player), position: index + 1 })),
     resting: roster.filter((player) => player.status === "resting").map(label),
-    notArrived: roster.filter((player) => player.status === "registered").length,
     you:
       mine?.status === "playing" && myCourt
         ? { kind: "playing", courtLabel: myCourt.label }
@@ -386,9 +382,7 @@ export async function getMemberSessionBoard(
             ? { kind: "queued", position: myQueueIndex + 1, ahead: myQueueIndex }
             : myWaitIndex >= 0
               ? { kind: "waitlisted", position: myWaitIndex + 1 }
-              : mine && mine.status !== "cancelled" && mine.status !== "no_show"
-                ? { kind: "registered" }
-                : { kind: "none" },
+              : { kind: "none" },
   };
 }
 

@@ -194,3 +194,41 @@ describe("displayName", () => {
     expect(displayName("   ")).toBe("Player");
   });
 });
+
+describe("nextUp", () => {
+  const row = (
+    name: string,
+    status: RegistrationStatus,
+    queuePosition: number,
+    courtId: string | null = null,
+  ): BoardPlayer => ({
+    registrationId: name,
+    name,
+    skillLevel: "beginner",
+    status,
+    courtId,
+    queuePosition,
+    seatedAt: null,
+    checkedInAt: null,
+  });
+
+  it("queues everybody who signed up, arrived or not", () => {
+    const queue = nextUp([
+      row("Ana", "registered", 2),
+      row("Ben", "checked_in", 1),
+      row("Cy", "registered", 3),
+    ]);
+    expect(queue.map((player) => player.name)).toEqual(["Ben", "Ana", "Cy"]);
+  });
+
+  it("leaves out anyone already on a court, resting, or gone", () => {
+    const queue = nextUp([
+      row("Ana", "playing", 1, "c1"),
+      row("Ben", "resting", 2),
+      row("Cy", "cancelled", 3),
+      row("Dina", "no_show", 4),
+      row("Eli", "registered", 5),
+    ]);
+    expect(queue.map((player) => player.name)).toEqual(["Eli"]);
+  });
+});

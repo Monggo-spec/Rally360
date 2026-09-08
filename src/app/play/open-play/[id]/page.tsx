@@ -42,13 +42,7 @@ export default async function MemberSessionBoardPage({ params }: PageProps<"/pla
               head: `You are number ${you.position} on the waitlist`,
               body: "You move into a seat automatically as soon as somebody drops out.",
             }
-          : you.kind === "registered"
-            ? {
-                tone: "grey",
-                head: "You have a seat, but you are not checked in",
-                body: "See the front desk when you arrive so they can put you in the queue.",
-              }
-            : { tone: "grey", head: "You are not in this session", body: "Join it from the open play list." };
+          : { tone: "grey", head: "You are not in this session", body: "Join it from the open play list." };
 
   const shell = (children: React.ReactNode) => (
     <AppShell
@@ -104,7 +98,7 @@ export default async function MemberSessionBoardPage({ params }: PageProps<"/pla
                 variant="volt"
                 small={false}
               />
-            ) : you.kind === "playing" || you.kind === "queued" || you.kind === "registered" ? (
+            ) : you.kind === "playing" || you.kind === "queued" ? (
               <ActionButton
                 action={takeRestAction}
                 fields={{ sessionId: openPlay.id }}
@@ -125,7 +119,7 @@ export default async function MemberSessionBoardPage({ params }: PageProps<"/pla
               </h2>
             </div>
             <span className="muted" style={{ fontSize: 13 }}>
-              {openPlay.counts.claimed} in this session &middot; {board.notArrived} not arrived yet
+              {openPlay.counts.claimed} in this session
             </span>
           </div>
 

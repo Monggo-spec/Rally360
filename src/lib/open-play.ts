@@ -132,10 +132,20 @@ export function buildCourtBoard(
   });
 }
 
-/** Players who are here but not on a court yet, in queue order. */
-export function nextUp(players: BoardPlayer[]): BoardPlayer[] {
+/**
+ * Everybody waiting for a court, in queue order.
+ *
+ * Signing up is enough: joining an open play session puts a player in the
+ * queue, and the only way out of it is onto a court or into a rest. There is
+ * no separate arrival step for the desk to tick off first.
+ */
+export function nextUp<T extends BoardPlayer>(players: T[]): T[] {
   return players
-    .filter((player) => player.status === "checked_in" && player.courtId === null)
+    .filter(
+      (player) =>
+        (player.status === "checked_in" || player.status === "registered") &&
+        player.courtId === null,
+    )
     .sort((a, b) => a.queuePosition - b.queuePosition);
 }
 
