@@ -54,6 +54,15 @@ p { margin: 0; }
   font-weight: 800;
 }
 .stack { display: grid; gap: 15px; }
+/*
+ * Grid and flex children size to their content by default (min-width: auto),
+ * so one wide row - a day strip, a table, the court grid - stretches the page
+ * instead of scrolling inside its own box. This lets them shrink, which is
+ * what makes the overflow-x on those boxes actually work.
+ */
+.stack > *,
+.card > *,
+.panel-body > * { min-width: 0; }
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .spread { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 
@@ -245,7 +254,7 @@ p { margin: 0; }
 
 /* ---------- KPI tiles ---------- */
 
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 14px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(168px, 100%), 1fr)); gap: 14px; }
 .kpi { padding: 18px; position: relative; overflow: hidden; }
 .kpi:after { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, var(--teal), #7fc9bd); }
 .kpi.volt:after { background: linear-gradient(90deg, var(--volt), #eaf9a8); }
@@ -349,7 +358,7 @@ a.kpi:hover .kpi-more { gap: 9px; }
 
 /* Buttons stay level with each other when one of them grows a feedback line. */
 .session-actions { align-items: flex-start; }
-.session-list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.session-list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
 .session { padding: 20px; display: grid; gap: 13px; }
 .session h3 { font-size: 17px; }
 .capacity-bar { height: 8px; border-radius: 999px; background: #eaf0ed; overflow: hidden; }
@@ -361,7 +370,7 @@ a.kpi:hover .kpi-more { gap: 9px; }
 /* ---------- court board (admin) ---------- */
 
 /* Wide enough that a name, its clock and its button sit on one line. */
-.board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
 .board-court { padding: 16px; display: grid; gap: 11px; }
 .board-court header { display: flex; justify-content: space-between; align-items: center; }
 .board-court h3 { font-size: 15px; }
@@ -611,10 +620,52 @@ a.kpi:hover .kpi-more { gap: 9px; }
   /* Keep sign-out reachable on phones - only the name block folds away. */
   .sidebar-foot { margin: 0; padding: 0; border: 0; display: flex; align-items: center; }
   .sidebar-foot .who { display: none; }
-  .nav { grid-auto-flow: column; width: 100%; justify-content: space-around; }
+  /* flex, not width:100% - a full-width nav pushes the sign-out button off the
+     edge of the screen, where it cannot be tapped at all. */
+  .nav { grid-auto-flow: column; flex: 1; min-width: 0; justify-content: space-around; }
   .topbar { padding: 12px 16px; min-height: 68px; }
   .topbar h1 { font-size: 19px; }
   .content { padding: 18px 16px 90px; }
   .hero, .features, .stat-strip, .top-nav { padding-inline: 18px; }
   .tv { padding: 18px; }
+}
+
+/*
+ * Touch sizing. A finger needs roughly 44px square to hit reliably, and iOS
+ * Safari zooms the page whenever a focused field is under 16px - which then
+ * leaves the layout scrolled sideways with no way back.
+ */
+@media (max-width: 720px) {
+  .nav a { min-height: 48px; min-width: 48px; }
+  /* The desktop 22px gap is a luxury the bottom bar cannot afford. */
+  .sidebar { height: 68px; gap: 10px; }
+  .content { padding-bottom: 96px; }
+  .button { min-height: 44px; }
+  .button.small { min-height: 40px; padding: 9px 15px; font-size: 13px; }
+  .input, select.input, textarea.input { min-height: 44px; font-size: 16px; }
+  /* Compact, so it never rides on top of the last nav icon. */
+  .sidebar-foot .button { min-height: 40px; padding: 8px 12px; font-size: 12.5px; }
+  /* One column of cards on a phone, whatever the card's preferred width. */
+  .field-row { grid-template-columns: 1fr; }
+}
+
+/*
+ * Reduced motion: the lift on every button and card is decoration, and some
+ * people are made ill by it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .button:hover:not(:disabled) { transform: none; }
+}
+
+/* Small phones: the bar carries five icons and a way out, on 320px of glass. */
+@media (max-width: 380px) {
+  .nav a { min-width: 40px; }
+  .sidebar { padding: 8px 6px; }
+  .sidebar-foot .button { padding: 8px 10px; font-size: 12px; }
 }
